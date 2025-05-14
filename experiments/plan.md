@@ -18,43 +18,27 @@ Operating System: Dual-boot Ubuntu 24.04 LTS (running natively on the primary ha
 
 Local Kubernetes Setup (MicroK8s):
 
-MicroK8s installed via sudo snap install microk8s --classic.
+MicroK8s installed via `sudo snap install microk8s --classic`.
 
-Enable GPU support and Helm3:
-
-```shell
-sudo usermod -aG microk8s $USER && newgrp microk8s
-microk8s enable helm3 nvidia metrics-server dns hostpath-storage metallb:10.64.140.43-10.64.140.49
-```
-
-The built‑in nvidia addon will detect and use host NVIDIA drivers and Container Toolkit automatically.
-
-Monitoring Addons: microk8s enable prometheus (or deploy kube-prometheus-stack via Helm) and enable ingress / metalLB for service exposure.
-
-Automation Script: Adapt the existing install.sh to:
-
-Install Docker and NVIDIA Container Toolkit if missing on Ubuntu.
-
-Install and configure MicroK8s with the above addons.
-
-Deploy NVIDIA GPU Operator via:
+Enable core addons, GPU support, and monitoring:
 
 ```shell
-microk8s helm3 repo add nvidia https://nvidia.github.io/gpu-operator
-microk8s helm3 repo update
-microk8s helm3 install gpu-operator nvidia/gpu-operator \
-  -n gpu-operator --create-namespace \
-  --version v25.3.0 \
-  --set driver.enabled=false \
-  --set driver.usePrecompiled=true \
-  --set driver.precompiled.driverVersion=570
+sudo usermod -aG microk8s $USER && newgrp microk8s # Or re-login
+microk8s status --wait-ready
+microk8s enable helm3 nvidia metrics-server dns hostpath-storage prometheus ingress metallb:10.64.140.43-10.64.140.49
 ```
+
+The `nvidia` addon will detect and use host NVIDIA drivers and the NVIDIA Container Toolkit automatically, deploying necessary components like the device plugin and DCGM-exporter. The `prometheus` addon provides the monitoring stack.
+
+Automation Script (`install.sh` - Simplified):
+
+Focus on: host prerequisites (NVIDIA drivers, NVIDIA Container Toolkit if not present), MicroK8s installation, user group modification, and enabling the core MicroK8s addons as listed above.
 
 3. Workload
 
 Application: MobileNetV4 image classification model.
 
-Deployment: Kubernetes Deployment in MicroK8s requesting nvidia.com/gpu: 1:
+Deployment: Kubernetes Deployment in MicroK8s requesting `nvidia.com/gpu: 1`:
 
 Serving Method:
 
@@ -62,15 +46,15 @@ Triton Inference Server (recommended) or
 
 Custom Python server (FastAPI/Flask)
 
-Adapt manifest from existing scripts/vllm-k8s.yaml (change image/command/args).
+Adapt manifest from existing `scripts/vllm-k8s.yaml` (change image/command/args).
 
 4. Reinforcement Learning (RL) Agent
 
 Algorithm: PPO (Proximal Policy Optimization).
 
-State Space (S): Metrics from Prometheus:
+State Space (S): Metrics from Prometheus (enabled via MicroK8s addon):
 
-Node utilization (CPU, memory, GPU/VRAM)
+Node utilization (CPU, memory, GPU/VRAM from DCGM-exporter included with `nvidia` addon)
 
 Pod resource metrics
 
@@ -102,9 +86,11 @@ Autoscaling: HPA with static CPU thresholds
 
 Monitoring:
 
-kube-prometheus-stack via Helm or microk8s enable prometheus
+Prometheus (enabled via `microk8s enable prometheus`).
 
-DCGM-Exporter
+DCGM-Exporter (deployed as part of `microk8s enable nvidia`).
+
+Grafana can be optionally enabled via `microk8s enable grafana` if dashboards are needed.
 
 Load Generation:
 
@@ -128,13 +114,10 @@ Replica count over time
 
 Phase 1: Environment Setup
 
-Prepare Ubuntu 24.04 with RTX 3080 drivers.
-
-Run adapted install.sh to install Docker, NVIDIA toolkit, MicroK8s with addons.
-
-Deploy GPU Operator, monitoring stack, and DCGM-Exporter.
-
-Deploy MobileNetV4 service and load generator.
+1.  Prepare Ubuntu 24.04 host with RTX 3080 NVIDIA drivers and NVIDIA Container Toolkit.
+2.  Run simplified `install.sh` to install MicroK8s and enable core addons (DNS, storage, Helm, metrics-server, ingress, metallb, nvidia, prometheus).
+3.  Verify GPU availability in MicroK8s and that Prometheus is scraping GPU metrics from DCGM-exporter.
+4.  Deploy MobileNetV4 service and load generator.
 
 Phase 2: Baseline Evaluation
 
@@ -168,7 +151,7 @@ Statistical tests (e.g., t-test) on KPI differences.
 
 Visualize with tables & charts.
 
-Discuss strengths, weaknesses, limitations.
+Discuss strengths, weaknesses, limitations (e.g., single powerful edge node simulation).
 
 Outline future work.
 
@@ -212,34 +195,45 @@ GPU：NVIDIA GeForce RTX 3080（10GB 显存）
 
 本地 Kubernetes：MicroK8s
 
-安装：sudo snap install microk8s --classic。
+通过 `sudo snap install microk8s --classic` 安装 MicroK8s。
 
-加入 microk8s 组并启用插件：
+启用核心插件、GPU 支持和监控：
 
 ```shell
-sudo usermod -aG microk8s $USER && newgrp microk8s
+sudo usermod -aG microk8s $USER && newgrp microk8s # 或重新登录
+microk8s status --wait-ready
 microk8s enable helm3 nvidia metrics-server dns hostpath-storage prometheus ingress metallb:10.64.140.43-10.64.140.49
 ```
 
-nvidia 插件自动使用宿主机驱动。
+`nvidia` 插件将自动检测并使用宿主机 NVIDIA 驱动程序和 NVIDIA Container Toolkit，部署必要的组件如设备插件和 DCGM-exporter。`prometheus` 插件提供监控堆栈。
 
-自动化脚本： 调整 install.sh 安装 Docker、NVIDIA 工具箱、MicroK8s 及上述插件，并部署 GPU Operator 和监控组件。
+自动化脚本 (`install.sh` - 简化版):
+
+主要关注：宿主机先决条件 (NVIDIA 驱动, NVIDIA Container Toolkit 如果不存在), MicroK8s 安装, 用户组修改, 以及启用上述核心 MicroK8s 插件。
 
 3. 工作负载
 
 应用： MobileNetV4 图像分类。
 
-部署： Kubernetes Deployment，资源请求 nvidia.com/gpu: 1。
+部署： Kubernetes Deployment，资源请求 `nvidia.com/gpu: 1`。
 
 服务框架：Triton 或自定义 FastAPI
 
-参考 scripts/vllm-k8s.yaml 结构，替换镜像和启动参数。
+参考 `scripts/vllm-k8s.yaml` 结构，替换镜像和启动参数。
 
 4. RL 代理
 
 算法： PPO。
 
-状态空间： Prometheus 指标（节点/Pod CPU、内存、GPU 利用率、队列长度、延迟、Replica 数）
+状态空间： Prometheus 指标 (通过 MicroK8s 插件启用):
+
+节点利用率 (CPU、内存、GPU/显存 来自 `nvidia` 插件包含的 DCGM-exporter)
+
+Pod 资源指标
+
+推理队列长度、延迟
+
+Replica 数
 
 动作空间： 调整 HPA 目标、Replica 数、资源请求/限制
 
@@ -253,7 +247,13 @@ nvidia 插件自动使用宿主机驱动。
 
 6. 监控与负载
 
-监控： kube-prometheus-stack 或 microk8s enable prometheus + DCGM-Exporter
+监控：
+
+Prometheus (通过 `microk8s enable prometheus` 启用)。
+
+DCGM-Exporter (作为 `microk8s enable nvidia` 的一部分部署)。
+
+如果需要仪表盘，可选择通过 `microk8s enable grafana` 启用 Grafana。
 
 负载： Locust/k6，定义低/高/混合模式
 
@@ -263,15 +263,20 @@ nvidia 插件自动使用宿主机驱动。
 
 8. 实验流程
 
-环境搭建；
+阶段 1：环境搭建
 
-基线评估 N=5；
+1.  准备好带有 RTX 3080 NVIDIA 驱动和 NVIDIA Container Toolkit 的宿主机 Ubuntu 24.04。
+2.  运行简化的 `install.sh` 脚本安装 MicroK8s 并启用核心插件 (DNS, storage, Helm, metrics-server, ingress, metallb, nvidia, prometheus)。
+3.  验证 MicroK8s 中 GPU 的可用性，以及 Prometheus 是否从 DCGM-exporter 抓取 GPU 指标。
+4.  部署 MobileNetV4 服务和负载生成器。
 
-RL 训练；
+阶段 2：基线评估 N=5；
 
-RL 评估 N=5；
+阶段 3：RL 训练；
 
-统计分析 & 比较；
+阶段 4：RL 评估 N=5；
+
+阶段 5：统计分析 & 比较；讨论优势、劣势、局限性 (例如，单个强大边缘节点的模拟)。
 
 9. 统计分析
 
