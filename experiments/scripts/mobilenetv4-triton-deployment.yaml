@@ -28,19 +28,19 @@ data:
     max_batch_size: 0 # 0 means dynamic batching is supported by the model and Triton's scheduler
     input [
       {
-        name: "input_tensor_name" # Replace with actual input tensor name
+        name: "pixel_values" # Corrected input tensor name
         data_type: TYPE_FP32 # Replace with actual data type
-        dims: [ -1, 3, 224, 224 ] # Replace with actual dimensions (e.g., -1 for batch, C, H, W)
+        dims: [ -1, 3, 224, 224 ] # Assuming standard ImageNet input [batch, channels, height, width]
       }
     ]
     output [
       {
-        name: "output_tensor_name" # Replace with actual output tensor name
+        name: "output" # Default/common output name, verify with Netron if issues persist
         data_type: TYPE_FP32 # Replace with actual data type
-        dims: [ -1, 1000 ] # Replace with actual dimensions (e.g., -1 for batch, num_classes)
+        dims: [ -1, 1000 ] # Assuming 1000 classes for ImageNet, verify with Netron
       }
     ]
-    # instance_group [ { kind: KIND_GPU } ] # Uncomment and configure if you want to specify GPU instances
+    instance_group [ { kind: KIND_GPU, count: 1 } ]
     # dynamic_batching { preferred_batch_size: [4, 8], max_queue_delay_microseconds: 100 } # Optional: configure dynamic batching
 ---
 apiVersion: apps/v1
@@ -83,30 +83,48 @@ spec:
             echo "Copying model config (config.pbtxt)..."
             mkdir -p /mnt/repository/mobilenetv4
             cp /mnt/config/config.pbtxt /mnt/repository/mobilenetv4/config.pbtxt
-            echo "Copying model files (e.g., model.onnx)..."
-            # You will need to ensure your actual model file (e.g., model.onnx) is in the PVC
-            # at the path mobilenetv4/1/model.onnx relative to the PVC root.
-            # Example: if PVC is mounted at /mnt/pvc_models, then model is at /mnt/pvc_models/mobilenetv4/1/model.onnx
-            # This init container would then copy it:
-            if [ -d /mnt/pvc_models/mobilenetv4 ]; then
-              echo "Model directory found in PVC, copying..."
-              cp -r /mnt/pvc_models/mobilenetv4 /mnt/repository/
-            else
-              echo "WARNING: Model directory 'mobilenetv4' not found in PVC /mnt/pvc_models/"
-              echo "Please ensure your model (e.g. mobilenetv4/1/model.onnx) is in the PVC."
-              # Create a dummy structure so Triton doesn't fail immediately if PVC is empty
-              mkdir -p /mnt/repository/mobilenetv4/1
-              echo "This is a placeholder model file." > /mnt/repository/mobilenetv4/1/placeholder.txt
-            fi
-            echo "Model repository population complete."
+            echo "Model config copied."
+            echo "Init container expects model.onnx to be copied by prepare_model_pvc.sh into the PVC."
+            echo "Then, the main triton container will mount the PVC at /models."
+            echo "The Triton deployment itself points its --model-repository to the PVC mount."
+            echo "This init container (populate-model-repository) primarily handles the config.pbtxt."
+            echo "If model was also to be copied by this init container from a PVC to an emptyDir, that logic would be here."
+            echo "Current design: PVC is directly mounted by Triton main container."
             ls -R /mnt/repository
+            # The model itself (model.onnx) is expected to be in the PVC already (copied by model-copy-pod)
+            # and Triton directly uses the PVC mount path /models.
+            # This init container is simplified to only place config.pbtxt if needed in an emptyDir structure.
+            # However, the current Triton deployment mounts the PVC at /models directly, 
+            # and the config.pbtxt from configmap is used to construct the model repo by an earlier init container (if used that way)
+            # OR triton loads it if config.pbtxt is alongside model.onnx in the PVC.
+            # For clarity, let's ensure this init container copies config.pbtxt to the emptyDir, 
+            # and the main container mounts BOTH the PVC (for model.onnx) and this emptyDir (for config.pbtxt).
+            # Let's adjust: model repository for triton will be an emptyDir populated by initContainers.
+            # initContainer1 (this one) copies config.pbtxt to emptyDir/mobilenetv4/config.pbtxt
+            # initContainer2 (new or modified) copies model.onnx from PVC to emptyDir/mobilenetv4/1/model.onnx
+            # OR, simplify: Main Triton container mounts PVC at /repository_base and its model dir is /repository_base/mobilenetv4.
+            # config.pbtxt will be in /repository_base/mobilenetv4/config.pbtxt (copied by this init from CM)
+            # model.onnx will be in /repository_base/mobilenetv4/1/model.onnx (copied by an earlier pod into PVC)
+
+            # Simplest approach with current setup: 
+            # 1. model-copy-pod (from prepare_model_pvc.sh) copies model.onnx into PVC -> /mobilenetv4/1/model.onnx
+            # 2. This init container copies config.pbtxt from ConfigMap into the same PVC structure -> /mobilenetv4/config.pbtxt
+            # 3. Triton main container mounts the PVC at /models and uses --model-repository=/models
+
+            echo "Copying config.pbtxt to PVC via an intermediate mount..."
+            # This init container needs access to the PVC to place the config.pbtxt.
+            # The command in model-copy-pod already created /pvc_mount/mobilenetv4/1. We need /pvc_mount/mobilenetv4.
+            mkdir -p /pvc_model_mount/mobilenetv4 
+            cp /cm_config/config.pbtxt /pvc_model_mount/mobilenetv4/config.pbtxt
+            echo "Copied config.pbtxt to relative PVC path mobilenetv4/config.pbtxt"
+            echo "Listing content of where config.pbtxt should be on PVC (via this init container's perspective):"
+            ls -lR /pvc_model_mount/mobilenetv4
+
         volumeMounts:
-          - name: model-storage-pvc
-            mountPath: /mnt/pvc_models # Where the PVC is mounted
-          - name: model-config-cm
-            mountPath: /mnt/config # Where config.pbtxt is mounted
-          - name: model-repository # The target emptyDir for combined repo
-            mountPath: /mnt/repository
+          - name: model-storage-pvc # Mount the PVC here to write config.pbtxt
+            mountPath: /pvc_model_mount 
+          - name: model-config-cm # Mount the configMap for config.pbtxt source
+            mountPath: /cm_config 
       containers:
       - name: triton-inference-server
         # Check NVIDIA NGC for the latest recommended Triton image tag for general use (e.g., includes ONNX, TF, TensorRT backends)
@@ -146,8 +164,8 @@ spec:
           timeoutSeconds: 2
           failureThreshold: 3
         volumeMounts:
-          - name: model-repository # Mount the populated model repository from emptyDir
-            mountPath: /models
+          - name: model-storage-pvc # Mount the PVC directly, expects models/mobilenetv4/1/model.onnx & models/mobilenetv4/config.pbtxt
+            mountPath: /models 
 ---
 apiVersion: v1
 kind: Service
