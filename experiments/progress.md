@@ -71,12 +71,79 @@ The primary goal of this phase was to establish a stable and functional local Ku
     *   `observability` (replacing the deprecated `prometheus` addon)
 *   The system seems ready for deploying the MobileNetV4 workload and starting baseline experiments as outlined in `experiments/plan.md`.
 
+### Decisions for Workload Deployment (as of 2025-05-13):
+
+*   **Project Directory Structure for Experiments:**
+    *   `experiments/scripts/`: For MicroK8s deployment YAMLs and related scripts.
+    *   `experiments/baseline/`: For baseline experiment code, configurations, and results.
+    *   `experiments/rl/`: For RL agent code, training scripts, models, and results.
+    *   `experiments/data/`: For image datasets (e.g., Tiny ImageNet validation set).
+*   **Image Dataset:** Tentatively **Tiny ImageNet (validation set)**, to be placed in `experiments/data/tiny-imagenet/val/`.
+*   **Load Generator:** **Locust** (Python-based, flexible).
+*   **MobileNetV4 Serving Method:** **Triton Inference Server** (performance, GPU support, flexibility).
+*   **MobileNetV4 Kubernetes Manifest:** To be created at `experiments/scripts/mobilenetv4-triton-deployment.yaml`.
+
 ### Next Steps (from `experiments/plan.md`):
 
-1.  Verify all addon pods are running correctly, especially in `metallb-system` and `observability` namespaces.
+1.  **Verify all addon pods are running correctly, especially in `metallb-system` and `observability` namespaces.**
+    *   **Status: COMPLETED (2025-05-13)**
+    *   `metallb-system` pods (`controller`, `speaker`) are `Running` and `READY 1/1`.
+    *   `observability` pods (Alertmanager, Grafana, Prometheus Operator, Kube State Metrics, Node Exporter, Loki, Promtail, Prometheus, Tempo) are all `Running` and `READY`. (Alertmanager had 1 restart but recovered).
 2.  Proceed with deploying the MobileNetV4 service.
 3.  Deploy the load generator (Locust/k6).
 4.  Begin Phase 2: Baseline Evaluation.
 
 ---
 *This log will be updated as the experiment progresses.*
+
+## Environment Setup ✅
+- [x] Install MicroK8s
+- [x] Enable required addons (nvidia, metallb, observability)
+- [x] Verify GPU support
+- [x] Configure storage
+
+## Baseline Experiment Setup ✅
+- [x] Create Triton deployment for MobileNetV4
+- [x] Set up PVC for model storage
+- [x] Configure Locust for load testing
+- [x] Create automation scripts
+- [x] Set up result collection
+
+## Baseline Experiment Execution 🔄
+- [ ] Run baseline experiments with different load patterns:
+  - [ ] Low load (10 users)
+  - [ ] Medium load (50 users)
+  - [ ] High load (100 users)
+- [ ] Collect and analyze results
+- [ ] Document baseline performance metrics
+
+## RL Agent Development ⏳
+- [ ] Design state space
+- [ ] Define action space
+- [ ] Implement reward function
+- [ ] Develop PPO agent
+- [ ] Create training pipeline
+
+## RL Training ⏳
+- [ ] Train agent with baseline data
+- [ ] Validate agent performance
+- [ ] Fine-tune hyperparameters
+- [ ] Save best model
+
+## RL Evaluation ⏳
+- [ ] Deploy trained agent
+- [ ] Run comparison experiments
+- [ ] Collect performance metrics
+- [ ] Compare with baseline
+
+## Analysis and Documentation ⏳
+- [ ] Statistical analysis
+- [ ] Performance comparison
+- [ ] Write final report
+- [ ] Prepare presentation
+
+## Notes
+- Baseline experiment automation is now complete with `make baseline` command
+- Results will be stored in `results/baseline/` directory with timestamps
+- Each experiment run includes pod status, logs, and performance metrics
+- Use `make clean-baseline` to clean up experiment resources
