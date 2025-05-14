@@ -10,7 +10,7 @@ PROJECT_ROOT_REL_TO_SCRIPT="../.."
 PROJECT_ROOT_ABS="$(cd "$(dirname "$0")/$PROJECT_ROOT_REL_TO_SCRIPT" && pwd)"
 
 LOCAL_MODEL_PATH="$PROJECT_ROOT_ABS/models/mobilenetv4/1/model.onnx"
-TRITON_DEPLOYMENT_YAML_PATH="$PROJECT_ROOT_ABS/scripts/mobilenetv4-triton-deployment.yaml" # Assuming it's in experiments/scripts
+TRITON_DEPLOYMENT_YAML_PATH="$(dirname "$0")/mobilenetv4-triton-deployment.yaml" # Current directory (experiments/scripts)
 
 echo "Project root determined as: $PROJECT_ROOT_ABS"
 echo "Expecting local ONNX model at: $LOCAL_MODEL_PATH"
