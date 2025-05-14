@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# Use microk8s kubectl
+KUBECTL="microk8s kubectl"
+
 # Create a temporary directory for model preparation
 TEMP_DIR=$(mktemp -d)
 MODEL_DIR="$TEMP_DIR/mobilenetv4/1"
@@ -13,7 +16,7 @@ echo "Downloading MobileNetV4 model..."
 # Example: wget https://example.com/mobilenetv4.onnx -O "$MODEL_DIR/model.onnx"
 
 # Create a temporary pod to copy files to PVC
-cat <<EOF | kubectl apply -f -
+cat <<EOF | $KUBECTL apply -f -
 apiVersion: v1
 kind: Pod
 metadata:
@@ -34,13 +37,13 @@ spec:
 EOF
 
 # Wait for pod to be ready
-kubectl wait --for=condition=Ready pod/model-copy-pod -n workloads
+$KUBECTL wait --for=condition=Ready pod/model-copy-pod -n workloads
 
 # Copy model files to PVC
-kubectl cp "$TEMP_DIR/mobilenetv4" workloads/model-copy-pod:/mnt/models/
+$KUBECTL cp "$TEMP_DIR/mobilenetv4" workloads/model-copy-pod:/mnt/models/
 
 # Clean up
-kubectl delete pod model-copy-pod -n workloads
+$KUBECTL delete pod model-copy-pod -n workloads
 rm -rf "$TEMP_DIR"
 
 echo "Model files have been copied to PVC" 
