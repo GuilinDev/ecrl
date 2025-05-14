@@ -11,6 +11,8 @@ PROJECT_ROOT_ABS="$(cd "$(dirname "$0")/$PROJECT_ROOT_REL_TO_SCRIPT" && pwd)"
 
 LOCAL_MODEL_PATH="$PROJECT_ROOT_ABS/models/mobilenetv4/1/model.onnx"
 TRITON_DEPLOYMENT_YAML_PATH="$(dirname "$0")/mobilenetv4-triton-deployment.yaml" # Current directory (experiments/scripts)
+CONFIGMAP_NAME="mobilenetv4-config-pbtxt-cm"
+NAMESPACE="workloads"
 
 echo "Project root determined as: $PROJECT_ROOT_ABS"
 echo "Expecting local ONNX model at: $LOCAL_MODEL_PATH"
@@ -35,12 +37,15 @@ else
 fi
 
 # Create namespace if it doesn't exist
-$KUBECTL get ns workloads > /dev/null 2>&1 || $KUBECTL create namespace workloads
-echo "Ensured namespace 'workloads' exists."
+$KUBECTL get ns $NAMESPACE > /dev/null 2>&1 || $KUBECTL create namespace $NAMESPACE
+echo "Ensured namespace '$NAMESPACE' exists."
 
-# Apply the Triton deployment YAML which should contain the PVC definition.
-# This is to ensure the PVC is created before the model-copy-pod tries to use it.
-echo "Applying Triton deployment manifest to create/ensure PVC exists: $TRITON_DEPLOYMENT_YAML_PATH"
+# Delete the ConfigMap if it exists, to ensure a fresh apply
+echo "Attempting to delete existing ConfigMap '$CONFIGMAP_NAME' in namespace '$NAMESPACE' to ensure fresh apply..."
+$KUBECTL delete configmap $CONFIGMAP_NAME -n $NAMESPACE --ignore-not-found=true
+
+# Apply the Triton deployment YAML which should contain the PVC definition and the new ConfigMap.
+echo "Applying Triton deployment manifest to create/ensure PVC and ConfigMap exists: $TRITON_DEPLOYMENT_YAML_PATH"
 if [ ! -f "$TRITON_DEPLOYMENT_YAML_PATH" ]; then
     echo "ERROR: Triton deployment YAML not found at $TRITON_DEPLOYMENT_YAML_PATH"
     rm -rf "$TEMP_DIR_HOST"
@@ -50,12 +55,12 @@ $KUBECTL apply -f "$TRITON_DEPLOYMENT_YAML_PATH"
 
 # Wait for the PVC to be bound
 PVC_NAME="mobilenetv4-model-pvc"
-echo "Waiting for PVC '$PVC_NAME' in namespace 'workloads' to be Bound..."
+echo "Waiting for PVC '$PVC_NAME' in namespace '$NAMESPACE' to be Bound..."
 timeout=120 # seconds
 endtime=$(( $(date +%s) + timeout ))
 pvc_status=""
 while [ $(date +%s) -lt $endtime ]; do
-    pvc_status=$($KUBECTL get pvc "$PVC_NAME" -n workloads -o jsonpath='{.status.phase}' 2>/dev/null)
+    pvc_status=$($KUBECTL get pvc "$PVC_NAME" -n $NAMESPACE -o jsonpath='{.status.phase}' 2>/dev/null)
     if [ "$pvc_status" == "Bound" ]; then
         echo "PVC '$PVC_NAME' is Bound."
         break
@@ -66,7 +71,7 @@ done
 
 if [ "$pvc_status" != "Bound" ]; then
     echo "ERROR: PVC '$PVC_NAME' did not become Bound within $timeout seconds. Status: $pvc_status"
-    $KUBECTL describe pvc "$PVC_NAME" -n workloads
+    $KUBECTL describe pvc "$PVC_NAME" -n $NAMESPACE
     rm -rf "$TEMP_DIR_HOST"
     exit 1
 fi
@@ -80,7 +85,7 @@ apiVersion: v1
 kind: Pod
 metadata:
   name: model-copy-pod
-  namespace: workloads
+  namespace: $NAMESPACE
 spec:
   restartPolicy: Never
   containers:
@@ -106,22 +111,22 @@ spec:
 EOF
 
 echo "Waiting for model-copy-pod to complete..."
-if $KUBECTL wait --for=condition=Succeeded pod/model-copy-pod -n workloads --timeout=180s; then
+if $KUBECTL wait --for=condition=Succeeded pod/model-copy-pod -n $NAMESPACE --timeout=180s; then
     echo "model-copy-pod completed successfully."
     echo "Logs from model-copy-pod:"
-    $KUBECTL logs model-copy-pod -n workloads
+    $KUBECTL logs model-copy-pod -n $NAMESPACE
 else
     echo "ERROR: model-copy-pod did not succeed within timeout."
     echo "Current status of model-copy-pod:"
-    $KUBECTL describe pod model-copy-pod -n workloads
+    $KUBECTL describe pod model-copy-pod -n $NAMESPACE
     echo "Logs from model-copy-pod (if any):"
-    $KUBECTL logs model-copy-pod -n workloads
+    $KUBECTL logs model-copy-pod -n $NAMESPACE
     # Attempt to clean up on failure, but the primary issue needs to be resolved.
 fi
 
 # Clean up the pod
 echo "Deleting model-copy-pod..."
-$KUBECTL delete pod model-copy-pod -n workloads --ignore-not-found=true
+$KUBECTL delete pod model-copy-pod -n $NAMESPACE --ignore-not-found=true
 
 # Clean up the temporary directory from host
 echo "Cleaning up temporary host directory: $TEMP_DIR_HOST"
