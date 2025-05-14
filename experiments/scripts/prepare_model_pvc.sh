@@ -1,7 +1,7 @@
 #!/bin/bash
 
-# Use microk8s kubectl
-KUBECTL="microk8s kubectl"
+# Use sudo with microk8s kubectl
+KUBECTL="sudo microk8s kubectl"
 
 # Create a temporary directory for model preparation
 TEMP_DIR=$(mktemp -d)

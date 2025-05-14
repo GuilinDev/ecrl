@@ -6,8 +6,8 @@ BASELINE_DIR := $(RESULTS_DIR)/baseline
 TIMESTAMP := $(shell date +%Y%m%d_%H%M%S)
 BASELINE_RESULT := $(BASELINE_DIR)/baseline_$(TIMESTAMP)
 
-# Use microk8s kubectl
-KUBECTL := microk8s kubectl
+# Use sudo with microk8s kubectl
+KUBECTL := sudo microk8s kubectl
 
 # Create necessary directories
 $(shell mkdir -p $(BASELINE_DIR))
@@ -26,7 +26,7 @@ run-baseline:
 	@echo "Running baseline experiment..."
 	@echo "Please configure and start the test in Locust web interface (http://localhost:8089)"
 	@echo "Press Enter when the test is complete..."
-	@read -p "Press Enter to continue..."
+	@bash -c 'read -p "Press Enter to continue..."'
 
 collect-results:
 	@echo "Collecting experiment results..."

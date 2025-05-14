@@ -1,7 +1,7 @@
 #!/bin/bash
 
-# Use microk8s kubectl
-KUBECTL="microk8s kubectl"
+# Use sudo with microk8s kubectl
+KUBECTL="sudo microk8s kubectl"
 
 # Create namespace if it doesn't exist
 $KUBECTL create namespace workloads --dry-run=client -o yaml | $KUBECTL apply -f -
