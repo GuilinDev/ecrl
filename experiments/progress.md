@@ -105,16 +105,18 @@ The primary goal of this phase was to establish a stable and functional local Ku
 ## Baseline Experiment Setup ✅
 - [x] Create Triton deployment for MobileNetV4
 - [x] Set up PVC for model storage
+- [x] **Switched to downloading pre-converted ONNX model (MobileNetV4 Conv Small) from Hugging Face Hub**
+- [x] Update PVC population script to use downloaded ONNX model
 - [x] Configure Locust for load testing
-- [x] Create automation scripts
+- [x] Create automation scripts (`Makefile` with `download-hf-model`, `baseline` targets)
 - [x] Set up result collection
 
 ## Baseline Experiment Execution 🔄
-- [ ] Run baseline experiments with different load patterns:
-  - [ ] Low load (10 users)
-  - [ ] Medium load (50 users)
-  - [ ] High load (100 users)
-- [ ] Collect and analyze results
+- [ ] Run `make baseline` to download model, prepare PVC, deploy, and run tests:
+  - [ ] Low load (e.g., 10 users)
+  - [ ] Medium load (e.g., 50 users)
+  - [ ] High load (e.g., 100 users)
+- [ ] Collect and analyze results (stored in `results/baseline/`)
 - [ ] Document baseline performance metrics
 
 ## RL Agent Development ⏳
@@ -143,7 +145,9 @@ The primary goal of this phase was to establish a stable and functional local Ku
 - [ ] Prepare presentation
 
 ## Notes
-- Baseline experiment automation is now complete with `make baseline` command
+- Baseline experiment automation is now complete with `make baseline` command (includes ONNX download).
+- **Model download script: `experiments/scripts/download_hf_onnx_model.py` (downloads `onnx-community/mobilenetv4_conv_small.e2400_r224_in1k`).**
+- **Model location after download: `experiments/models/mobilenetv4/1/model.onnx`.**
 - Results will be stored in `results/baseline/` directory with timestamps
 - Each experiment run includes pod status, logs, and performance metrics
-- Use `make clean-baseline` to clean up experiment resources
+- Use `make clean-baseline` to clean up experiment resources, `make clean` to also remove downloaded model and results.
