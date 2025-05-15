@@ -15,7 +15,8 @@ spec:
     spec:
       containers:
       - name: locust-master
-        image: locustio/locust:latest
+        image: custom-locust:latest
+        imagePullPolicy: Never  # Use local image
         ports:
         - containerPort: 8089
         - containerPort: 5557
@@ -54,7 +55,8 @@ spec:
     spec:
       containers:
       - name: locust-worker
-        image: locustio/locust:latest
+        image: custom-locust:latest
+        imagePullPolicy: Never  # Use local image
         env:
         - name: LOCUST_MODE
           value: "worker"
@@ -88,4 +90,4 @@ spec:
   - port: 5557
     targetPort: 5557
     name: master
-  type: ClusterIP 
+  type: ClusterIP
