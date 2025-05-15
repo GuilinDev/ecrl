@@ -25,11 +25,11 @@ data:
   config.pbtxt: |
     name: "mobilenetv4"
     platform: "onnxruntime_onnx" # Or "tensorflow_savedmodel" or "tensorrt_plan"
-    max_batch_size: 0 # 0 means dynamic batching is supported by the model and Triton's scheduler
+    max_batch_size: 8
     input [
       {
-        name: "pixel_values" # Corrected input tensor name
-        data_type: TYPE_FP32 # Replace with actual data type
+        name: "pixel_values"
+        data_type: TYPE_FP32
         dims: [ -1, 3, 224, 224 ] # Assuming standard ImageNet input [batch, channels, height, width]
       }
     ]
