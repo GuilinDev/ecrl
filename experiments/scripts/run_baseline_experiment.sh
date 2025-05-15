@@ -14,18 +14,14 @@ $KUBECTL apply -f "$(dirname "$0")/mobilenetv4-triton-deployment.yaml"
 echo "Waiting for Triton server to be ready..."
 $KUBECTL wait --for=condition=available deployment/mobilenetv4-triton-deployment -n workloads --timeout=300s
 
-# First, apply Locust deployments and services (but not the ConfigMap which we removed from the YAML)
+# Delete existing Locust configmap if it exists, then create from file
+echo "Updating Locust configuration..."
+$KUBECTL delete configmap locustfile-config -n workloads --ignore-not-found=true
+$KUBECTL create configmap locustfile-config --from-file=locustfile.py="$(dirname "$0")/locustfile.py" -n workloads
+
+# Deploy Locust
 echo "Deploying Locust..."
 $KUBECTL apply -f "$(dirname "$0")/locust-deployment.yaml"
-
-# Now, ensure the ConfigMap is created with the correct content AFTER applying the deployment
-echo "Ensuring Locust ConfigMap has the correct content..."
-$KUBECTL delete configmap locustfile-config -n workloads --ignore-not-found=true
-$KUBECTL create configmap locustfile-config --from-file=locustfile.py="$(dirname "$0")/locustfile.py" -n workloads --save-config=false
-
-# Restart the Locust pods to ensure they pick up the new ConfigMap content
-echo "Restarting Locust pods to pick up the ConfigMap changes..."
-$KUBECTL rollout restart deployment/locust-master deployment/locust-worker -n workloads
 
 # Wait for Locust to be ready
 echo "Waiting for Locust to be ready..."
