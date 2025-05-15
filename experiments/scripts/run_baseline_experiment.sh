@@ -14,7 +14,7 @@ $KUBECTL apply -f "$(dirname "$0")/mobilenetv4-triton-deployment.yaml"
 echo "Waiting for Triton server to be ready..."
 $KUBECTL wait --for=condition=available deployment/mobilenetv4-triton-deployment -n workloads --timeout=300s
 
-0# Delete existing Locust configmap if it exists, then create from file
+# Delete existing Locust configmap if it exists, then create from file
 echo "Updating Locust configuration..."
 $KUBECTL delete configmap locustfile-config -n workloads --ignore-not-found=true
 $KUBECTL create configmap locustfile-config --from-file=locustfile.py="$(dirname "$0")/locustfile.py" -n workloads
