@@ -15,8 +15,12 @@ spec:
     spec:
       containers:
       - name: locust-master
-        image: custom-locust:latest
-        imagePullPolicy: Never  # Use local image
+        image: locustio/locust:latest
+        command: ["/bin/sh", "-c"]
+        args:
+          - |
+            pip install numpy tritonclient[http] && \
+            locust
         ports:
         - containerPort: 8089
         - containerPort: 5557
@@ -55,8 +59,12 @@ spec:
     spec:
       containers:
       - name: locust-worker
-        image: custom-locust:latest
-        imagePullPolicy: Never  # Use local image
+        image: locustio/locust:latest
+        command: ["/bin/sh", "-c"]
+        args:
+          - |
+            pip install numpy tritonclient[http] && \
+            locust
         env:
         - name: LOCUST_MODE
           value: "worker"

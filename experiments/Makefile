@@ -1,4 +1,4 @@
-.PHONY: baseline clean-baseline download-hf-model prepare-model build-locust-image deploy-baseline run-baseline collect-results clean
+.PHONY: baseline clean-baseline download-hf-model prepare-model deploy-baseline run-baseline collect-results clean
 
 # Directory for storing experiment results
 RESULTS_DIR := results
@@ -20,12 +20,7 @@ download-hf-model:
 	@$(PYTHON) ./scripts/download_hf_onnx_model.py
 	@echo "ONNX model download complete. Check experiments/models/mobilenetv4/1/model.onnx"
 
-build-locust-image:
-	@echo "Building custom Locust image..."
-	@cd scripts && sudo docker build -t custom-locust:latest -f Dockerfile.locust .
-	@echo "Custom Locust image built successfully"
-
-baseline: download-hf-model prepare-model build-locust-image deploy-baseline run-baseline collect-results
+baseline: download-hf-model prepare-model deploy-baseline run-baseline collect-results
 
 prepare-model:
 	@echo "Preparing model files for PVC..."
