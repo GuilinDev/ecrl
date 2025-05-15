@@ -36,12 +36,15 @@ spec:
         - name: LOCUST_MASTER_BIND_PORT
           value: "5557"
         volumeMounts:
-        - name: locustfile
+        - name: locustfile-volume
           mountPath: /home/locust
       volumes:
-      - name: locustfile
+      - name: locustfile-volume
         configMap:
           name: locustfile-config
+          items:
+          - key: locustfile.py
+            path: locustfile.py
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -69,12 +72,15 @@ spec:
         - name: LOCUST_MASTER_PORT
           value: "5557"
         volumeMounts:
-        - name: locustfile
+        - name: locustfile-volume
           mountPath: /home/locust
       volumes:
-      - name: locustfile
+      - name: locustfile-volume
         configMap:
           name: locustfile-config
+          items:
+          - key: locustfile.py
+            path: locustfile.py
 ---
 apiVersion: v1
 kind: Service

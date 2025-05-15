@@ -24,7 +24,7 @@ class TritonUser(HttpUser):
             
             # Create input tensor
             input_tensor = httpclient.InferInput(
-                "input_tensor_name",  # Replace with actual input tensor name
+                "pixel_values",  # Corrected input tensor name
                 input_data.shape,
                 "FP32"
             )
