@@ -2,3 +2,6 @@
 *.gz
 .venv
 .cursorrules
+/data/
+
+/experiments/results/
