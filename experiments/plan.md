@@ -94,6 +94,7 @@ To design, implement, and evaluate a Reinforcement Learning (RL) agent for dynam
 * CPU, memory, GPU utilization
 * QoS violation rate
 * Replica count over time
+* Model responsiveness (success rate with synthetic data)
 
 ## 8. Experimental Procedure / Phases
 
@@ -107,9 +108,13 @@ To design, implement, and evaluate a Reinforcement Learning (RL) agent for dynam
 **Phase 2: Baseline Evaluation**
 
 1. Configure default scheduler + HPA.
-2. Run each load profile N times (e.g., N=5).
-3. Collect KPIs from Prometheus.
-4. Compute means & 95% CIs.
+2. Run each load profile N times (e.g., N=5):
+   - Low load: 10 users
+   - Medium load: 50 users
+   - High load: 100 users
+3. Collect QoS metrics from Locust and resource metrics from Prometheus.
+4. Evaluate model responsiveness using synthetic data.
+5. Compute means & 95% CIs for all metrics.
 
 **Phase 3: RL Training**
 
@@ -141,6 +146,18 @@ To design, implement, and evaluate a Reinforcement Learning (RL) agent for dynam
 * Convergence definitions and metrics (reward curves, policy stability)
 * Stopping criteria for training
 * System‑level robustness evaluation
+
+## 12. Challenges and Mitigations
+
+### Model Accuracy Evaluation
+* **Challenge**: Mapping between Tiny ImageNet classes (200) and ImageNet classes (1000) used by MobileNetV4 is difficult
+* **Mitigation**: Use synthetic data to evaluate model responsiveness instead of true accuracy
+* **Alternative**: If accuracy is critical, consider using a model trained specifically on Tiny ImageNet or creating a proper class mapping with expert knowledge
+
+### Resource Metrics Collection
+* **Challenge**: Detailed GPU metrics are needed for RL agent
+* **Mitigation**: Use DCGM-Exporter for comprehensive GPU metrics
+* **Alternative**: Implement custom metrics collection if standard exporters are insufficient
 
 ## 11. Final Output
 

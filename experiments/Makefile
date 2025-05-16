@@ -1,4 +1,4 @@
-.PHONY: baseline clean-baseline download-hf-model prepare-model deploy-baseline run-baseline collect-results clean
+.PHONY: baseline clean-baseline download-hf-model prepare-model deploy-baseline run-baseline collect-results evaluate-accuracy clean
 
 # Directory for storing experiment results
 RESULTS_DIR := results
@@ -50,6 +50,21 @@ collect-results:
 	        echo "No locust-worker pods found or error collecting logs."; \
 	    fi
 	@echo "Results collected in $(BASELINE_RESULT)"
+
+evaluate-accuracy:
+	@echo "Evaluating model accuracy..."
+	@mkdir -p $(BASELINE_RESULT)
+	@echo "Running synthetic data test to evaluate model responsiveness..."
+	@chmod +x ./scripts/evaluate_synthetic.py
+	@echo "Installing required packages..."
+	@pip install numpy requests tqdm
+	@TRITON_IP=$$($(KUBECTL) get svc -n workloads mobilenetv4-triton-svc -o jsonpath='{.spec.clusterIP}') && \
+	./scripts/evaluate_synthetic.py \
+		--url http://$$TRITON_IP:8000 \
+		--model-name mobilenetv4 \
+		--num-samples 100 \
+		--output-file $(BASELINE_RESULT)/accuracy_results.json
+	@echo "Model evaluation complete. Results saved to $(BASELINE_RESULT)/accuracy_results.json"
 
 clean-baseline:
 	@echo "Cleaning up baseline experiment..."
