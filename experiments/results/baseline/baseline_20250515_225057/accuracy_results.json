@@ -1,8 +1,0 @@
-{
-  "accuracy": 0.0,
-  "correct_count": 0,
-  "total_count": 100,
-  "avg_latency_ms": 0.0,
-  "p95_latency_ms": 0.0,
-  "p99_latency_ms": 0.0
-}

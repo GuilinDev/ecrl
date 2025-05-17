@@ -32,9 +32,14 @@ deploy-baseline:
 
 run-baseline:
 	@echo "Running baseline experiment..."
+	@echo "Starting port forward for Locust web interface..."
+	@$(KUBECTL) port-forward -n workloads svc/locust-master 8089:8089 &
+	@echo "Port forwarding started with PID $$!"
 	@echo "Please configure and start the test in Locust web interface (http://localhost:8089)"
 	@echo "Press Enter when the test is complete..."
 	@bash -c 'read -p "Press Enter to continue..."'
+	@echo "Stopping port forward..."
+	@pkill -f "port-forward -n workloads svc/locust-master 8089:8089" || true
 
 collect-results:
 	@echo "Collecting experiment results..."

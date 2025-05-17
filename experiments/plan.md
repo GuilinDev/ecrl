@@ -47,9 +47,10 @@ To design, implement, and evaluate a Reinforcement Learning (RL) agent for dynam
 
   * **Serving Method:**
 
-    * **Triton Inference Server** (recommended) or
-    * **Custom Python server** (FastAPI/Flask)
-  * Adapt manifest from existing `scripts/vllm-k8s.yaml` (change image/command/args).
+    * **Triton Inference Server** with GPU acceleration
+    * Configuration: `instance_group [ { kind: KIND_GPU, count: 1 } ]` in model config
+  * Deployment manifest: `scripts/mobilenetv4-triton-deployment.yaml`
+  * GPU utilization: ~43% during inference with 1.5GB VRAM usage
 
 ## 4. Reinforcement Learning (RL) Agent
 

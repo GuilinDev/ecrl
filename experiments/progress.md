@@ -120,6 +120,46 @@ The primary goal of this phase was to establish a stable and functional local Ku
 - [x] Evaluate model responsiveness using synthetic data
 - [x] Document baseline performance metrics
 
+基线实验
+    │
+    ▼
+下载MobileNetV4模型
+    │
+    ▼
+准备模型配置
+    │
+    ▼
+部署Triton Inference Server
+    │
+    ▼
+部署Locust负载生成器
+    │
+    ▼
+运行负载测试
+    │
+    ├─────────┬─────────┐
+    ▼         ▼         ▼
+低负载测试   中负载测试   高负载测试
+(10用户)    (50用户)    (100用户)
+    │         │         │
+    ▼         ▼         ▼
+收集QoS指标  收集QoS指标  收集QoS指标
+    │         │         │
+    ▼         ▼         ▼
+收集资源指标  收集资源指标  收集资源指标
+    │         │         │
+    ▼         ▼         ▼
+评估模型响应性 评估模型响应性 评估模型响应性
+    │         │         │
+    └─────────┴─────────┘
+            │
+            ▼
+        分析结果
+            │
+            ▼
+    生成基线性能报告
+
+
 ## RL Agent Development ⏳
 - [ ] Design state space
 - [ ] Define action space
@@ -166,6 +206,12 @@ The primary goal of this phase was to establish a stable and functional local Ku
 - Model successfully processes all synthetic inputs
 - Consistent output distribution (all predictions favor class 644)
 - Stable latency across requests
+
+### GPU Utilization
+- **GPU**: NVIDIA GeForce RTX 3080
+- **Memory Usage**: ~1.5GB / 10GB VRAM
+- **GPU Utilization**: ~43% during inference
+- **Configuration**: Using Triton's GPU backend with `instance_group [ { kind: KIND_GPU, count: 1 } ]`
 
 ### Challenges
 - **Model Accuracy Evaluation**: Unable to properly evaluate model accuracy with Tiny ImageNet due to class mapping issues between Tiny ImageNet (200 classes) and ImageNet (1000 classes)
